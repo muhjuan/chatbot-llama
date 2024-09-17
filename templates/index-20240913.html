@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLaMA Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-box {
+            height: 400px;
+            overflow-y: scroll;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: #f1f1f1;
+        }
+
+        .chat-box p {
+            margin: 10px 0;
+        }
+
+        .chat-box p.user {
+            text-align: right;
+            color: #007bff;
+        }
+
+        .chat-box p.llama {
+            text-align: left;
+            color: #28a745;
+            white-space: pre-line; /* Ensures line breaks are preserved */
+        }
+
+        pre, code {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            display: block;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+
+        .message-input {
+            margin-top: 10px;
+        }
+
+        .message-input input {
+            width: calc(100% - 130px);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            display: inline-block;
+        }
+
+        .message-input select {
+            width: 120px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            display: inline-block;
+        }
+
+        .message-input button {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            display: inline-block;
+        }
+
+        .message-input button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container chat-container">
+        <h1 class="text-center mb-4">LLaMA Chatbot</h1>
+        <div class="chat-box" id="chat-box">
+            <!-- Chat messages will appear here -->
+        </div>
+        <div class="message-input">
+            <input type="text" id="user-message" placeholder="Type your message here..." />
+            <select id="model-selection">
+                <option value="llama3.1:70b">LLaMA 70B</option>
+                <option value="llama3.1:latest">LLaMA 30B</option>
+                <option value="mistral">Mistral 7B</option>
+                <option value="codellama:70b">CodeLlama</option>
+                <option value="tinydolphin">tinydolphin</option>
+            </select>
+            <button id="send-message" class="btn btn-primary mt-2">Send</button>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#send-message').click(function() {
+                var message = $('#user-message').val();
+                var selectedModel = $('#model-selection').val();
+                if (message.trim() !== "") {
+                    $('#chat-box').append('<p class="user"><strong>You:</strong> ' + message + '</p>');
+                    $('#user-message').val('');
+
+                    // Generate a unique ID for each LLaMA response
+                    var responseId = 'typing-area-' + new Date().getTime();
+
+                    // Append the placeholder for the new LLaMA response with the unique ID
+                    var llamaMessage = '<p class="llama"><strong>LLaMA:</strong> <span id="' + responseId + '"></span></p>';
+                    $('#chat-box').append(llamaMessage);
+                    
+                    // Send message and selected model to Flask backend and get response
+                    $.post('/chat', { message: message, model: selectedModel }, function(data) {
+                        simulateTyping(formatResponse(data.llama_response), responseId);
+                    });
+                }
+            });
+
+            // Simulate typing effect function
+            function simulateTyping(response, responseId) {
+                let typingArea = $('#' + responseId);
+                let index = 0;
+
+                function typeChar() {
+                    if (index < response.length) {
+                        typingArea.append(response[index]);
+                        index++;
+                        $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight); // Auto-scroll to bottom
+                        setTimeout(typeChar, 15); // Adjust typing speed (15ms per character)
+                    }
+                }
+
+                typeChar();
+            }
+
+            // Helper function to format response with HTML, Markdown, and Code blocks
+            function formatResponse(response) {
+                let formattedResponse = response;
+
+                // Format **bold** text
+                formattedResponse = formattedResponse.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+                // Format links [link text](URL)
+                formattedResponse = formattedResponse.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+                // Format inline code `code`
+                formattedResponse = formattedResponse.replace(/`(.*?)`/g, '<code>$1</code>');
+
+                // Format code blocks (```python, ```html, etc.)
+                formattedResponse = formattedResponse.replace(/```(.*?)\n([\s\S]*?)```/g, function(_, lang, code) {
+                    return '<pre><code class="' + lang + '">' + escapeHtml(code) + '</code></pre>';
+                });
+
+                return formattedResponse;
+            }
+
+            // Helper function to escape HTML to display code correctly
+            function escapeHtml(text) {
+                return text.replace(/&/g, "&amp;")
+                           .replace(/</g, "&lt;")
+                           .replace(/>/g, "&gt;")
+                           .replace(/"/g, "&quot;")
+                           .replace(/'/g, "&#039;");
+            }
+
+            $('#user-message').keydown(function(event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    $('#send-message').click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

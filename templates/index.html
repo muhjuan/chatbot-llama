@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot with Embedding</title>
+</head>
+<body>
+    <h1>Chatbot with Document Embedding</h1>
+    <form id="chat-form" method="POST" enctype="multipart/form-data">
+        <label for="message">Message:</label>
+        <input type="text" id="message" name="message" required><br>
+
+        <label for="model">Model:</label>
+        <input type="text" id="model" name="model" value="default-model" required><br>
+
+        <label for="file">Upload Document (PDF, DOCX, PPTX, XLSX):</label>
+        <input type="file" id="file" name="file"><br>
+
+        <label for="embed_choice">Choose Embedding Method:</label>
+        <select id="embed_choice" name="embed_choice">
+            <option value="nomic">Nomic Embed Text</option>
+            <option value="local">Local Embedding</option>
+        </select><br><br>
+
+        <button type="submit">Send</button>
+    </form>
+
+    <div id="response"></div>
+
+    <script>
+        const form = document.getElementById('chat-form');
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const response = await fetch('/chat', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            document.getElementById('response').innerHTML = JSON.stringify(result, null, 2);
+        }
+    </script>
+</body>
+</html>

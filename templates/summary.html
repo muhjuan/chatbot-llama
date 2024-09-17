@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Summary</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Document Summary</h1>
+        <form action="/summary" method="GET">
+            <div class="form-group">
+                <label for="filename">Enter Document Name:</label>
+                <input type="text" id="filename" name="filename" placeholder="Enter the document name" required>
+            </div>
+            <button type="submit">Get Summary</button>
+        </form>
+        {% if summary %}
+        <h2>Summary for {{ filename }}</h2>
+        <p>{{ summary }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
